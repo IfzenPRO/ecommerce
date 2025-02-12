@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="list-group">
+            <a href="#orders" class="list-group-item list-group-item-action active" data-bs-toggle="list">Orders</a>
+            <a href="#products" class="list-group-item list-group-item-action" data-bs-toggle="list">Products</a>
+            <a href="#users" class="list-group-item list-group-item-action" data-bs-toggle="list">Users</a>
+            <a href="#analytics" class="list-group-item list-group-item-action" data-bs-toggle="list">Analytics</a>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="tab-content">
+            <!-- Orders Tab -->
+            <div class="tab-pane fade show active" id="orders">
+                <h2>Orders</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer Name</th>
+                            <th>Address</th>
+                            <th>Contact</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>#{{ order.id }}</td>
+                            <td>{{ order.first_name }} {{ order.last_name }}</td>
+                            <td>
+                                {{ order.address }}<br>
+                                {{ order.city }}, {{ order.state }} {{ order.postal_code }}<br>
+                                {{ order.country }}
+                            </td>
+                            <td>{{ order.phone }}</td>
+                            <td>{{ order.date_ordered.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>${{ "%.2f"|format(order.total) }}</td>
+                            <td>{{ order.status }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" 
+                                        data-bs-target="#orderModal{{ order.id }}">
+                                    View Details
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- Order Details Modal -->
+                        <div class="modal fade" id="orderModal{{ order.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Order #{{ order.id }} Details</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <h6>Customer Information</h6>
+                                        <p>
+                                            <strong>Name:</strong> {{ order.first_name }} {{ order.last_name }}<br>
+                                            <strong>Address:</strong> {{ order.address }}<br>
+                                            <strong>City:</strong> {{ order.city }}<br>
+                                            <strong>State:</strong> {{ order.state }}<br>
+                                            <strong>Postal Code:</strong> {{ order.postal_code }}<br>
+                                            <strong>Country:</strong> {{ order.country }}<br>
+                                            <strong>Phone:</strong> {{ order.phone }}
+                                        </p>
+                                        <h6>Order Items</h6>
+                                        <table class="table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Product</th>
+                                                    <th>Quantity</th>
+                                                    <th>Price</th>
+                                                    <th>Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for item in order.items %}
+                                                <tr>
+                                                    <td>{{ item.product.name }}</td>
+                                                    <td>{{ item.quantity }}</td>
+                                                    <td>${{ "%.2f"|format(item.price) }}</td>
+                                                    <td>${{ "%.2f"|format(item.price * item.quantity) }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                                    <td>${{ "%.2f"|format(order.total) }}</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Products Tab -->
+            <div class="tab-pane fade" id="products">
+                <h2>Products</h2>
+                <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                    Add New Product
+                </button>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>{{ product.id }}</td>
+                            <td>
+                                {% if product.image %}
+                                <img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }}" style="max-width: 50px;">
+                                {% endif %}
+                            </td>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.description }}</td>
+                            <td>${{ "%.2f"|format(product.price) }}</td>
+                            <td>{{ product.stock }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary me-2" data-bs-toggle="modal" data-bs-target="#editProductModal{{ product.id }}">
+                                    Edit
+                                </button>
+                                <form id="deleteProduct{{ product.id }}" action="{{ url_for('delete_product', product_id=product.id) }}" method="POST" style="display: inline;">
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete({{ product.id }})">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <!-- Edit Product Modal -->
+                        <div class="modal fade" id="editProductModal{{ product.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Edit Product</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form action="{{ url_for('edit_product', product_id=product.id) }}" method="POST" enctype="multipart/form-data">
+                                            <div class="mb-3">
+                                                <label for="name{{ product.id }}" class="form-label">Product Name</label>
+                                                <input type="text" class="form-control" id="name{{ product.id }}" name="name" value="{{ product.name }}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="description{{ product.id }}" class="form-label">Description</label>
+                                                <textarea class="form-control" id="description{{ product.id }}" name="description" required>{{ product.description }}</textarea>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="price{{ product.id }}" class="form-label">Price</label>
+                                                <input type="number" step="0.01" class="form-control" id="price{{ product.id }}" name="price" value="{{ product.price }}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="stock{{ product.id }}" class="form-label">Stock</label>
+                                                <input type="number" class="form-control" id="stock{{ product.id }}" name="stock" value="{{ product.stock }}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="category{{ product.id }}" class="form-label">Category</label>
+                                                <input type="text" class="form-control" id="category{{ product.id }}" name="category" value="{{ product.category }}">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="image{{ product.id }}" class="form-label">Product Image</label>
+                                                <input type="file" class="form-control" id="image{{ product.id }}" name="image" onchange="previewImage(this)">
+                                                {% if product.image %}
+                                                <img src="{{ url_for('static', filename=product.image) }}" alt="{{ product.name }}" 
+                                                     style="max-width: 200px; margin-top: 10px;">
+                                                {% endif %}
+                                                <img id="imagePreview{{ product.id }}" src="#" alt="Preview" 
+                                                     style="max-width: 200px; display: none; margin-top: 10px;">
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Users Tab -->
+            <div class="tab-pane fade" id="users">
+                <h2>Users</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
+                                    {{ 'Active' if user.is_active else 'Inactive' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if not user.is_admin %}
+                                <form id="toggleUser{{ user.id }}" action="{{ url_for('toggle_user', user_id=user.id) }}" method="POST" style="display: inline;">
+                                    <button type="button" class="btn btn-sm btn-{{ 'warning' if user.is_active else 'success' }}" onclick="toggleUserStatus({{ user.id }})">
+                                        {{ 'Deactivate' if user.is_active else 'Activate' }}
+                                    </button>
+                                </form>
+                                {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled title="Admin accounts cannot be deactivated">
+                                    Admin Account
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div class="tab-pane fade" id="analytics">
+                <h2>Analytics</h2>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Total Revenue</h5>
+                                <h2>${{ "%.2f"|format(total_revenue) }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Total Orders</h5>
+                                <h2>{{ orders|length }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('add_product') }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Product Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="price" class="form-label">Price</label>
+                        <input type="number" step="0.01" class="form-control" id="price" name="price" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stock" class="form-label">Stock</label>
+                        <input type="number" class="form-control" id="stock" name="stock" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category</label>
+                        <input type="text" class="form-control" id="category" name="category">
+                    </div>
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Product Image</label>
+                        <input type="file" class="form-control" id="image" name="image" onchange="previewImage(this)">
+                        <img id="imagePreview" src="#" alt="Preview" style="max-width: 200px; display: none; margin-top: 10px;">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Product</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}
